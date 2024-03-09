@@ -77,12 +77,13 @@
             <button type="button" onclick="submitVideo()">Check</button>
         </form>
         <div id="result">
-            <!-- Display prediction result here -->
         </div>
     </div>
 
     <script>
         function submitVideo() {
+            document.getElementById("result").innerText = "Please wait while we process your video...";
+
             // Get the video link from the input
             var videoLink = document.getElementById("videoLink").value;
 

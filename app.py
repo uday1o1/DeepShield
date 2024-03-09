@@ -1,15 +1,11 @@
 import os
 from flask import Flask, render_template, request, jsonify
-import numpy as np
-import pandas as pd
-from tensorflow.keras.models import load_model
-
 import requests
 from werkzeug.utils import secure_filename
-import os
+
+from utils import model_predict
 
 current_directory = os.path.abspath(os.getcwd())
-model_path = os.path.join(current_directory, 'models', 'recompiled_best_model.h5')
 
 app = Flask(__name__)
 
@@ -17,13 +13,6 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 UPLOAD_FOLDER = os.path.join(current_directory, 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-# Load the model
-model = load_model(model_path)
-
-# Print model summary to verify it's loaded correctly
-print(model.summary())
-
 
 @app.route('/')
 def index():
@@ -38,9 +27,7 @@ def predict():
         # Download the video
         video_filename = download_video(video_link)
 
-        # prediction_result = detect_deep_fake(video_filename)
-
-        prediction_result = "video downloaded, actual prediction result stored here"  # Replace this with your actual prediction logic
+        prediction_result = model_predict()
 
         return jsonify({'prediction': prediction_result})
 
