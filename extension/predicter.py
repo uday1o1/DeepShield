@@ -10,9 +10,10 @@ feature_extractor = pretrain_feature_extractor()
 
 current_directory = os.path.abspath(os.getcwd())
 video_path = os.path.join(current_directory, 'uploads', 'downloaded_video.mp4')
-# model_path = os.path.join(current_directory, 'models', 'recompiled_best_model.h5')
-# model_path = os.path.join(current_directory, 'models', 'best_model_for_2048.weights.h5')
 model_path = os.path.join(current_directory, 'models', 'model_2048.keras')
+
+# Instantiate the pre-trained feature extractor model
+feature_extractor = pretrain_feature_extractor()
 
 # Load the model
 model = load_model(model_path)
@@ -117,10 +118,15 @@ def sequence_prediction():
     return model.predict([frame_features, frame_mask])[0]
 
 def model_predict():
-    prediction = "The video might be REAL"
+    
+    result = sequence_prediction()
+    result = result[0]
+    print(result)
     
     # Perform sequence prediction and print the result
-    if sequence_prediction() >= 0.6:
+    if result >= 0.6:
         prediction = "The video might be FAKE"
-    
+    else:
+        prediction = "The video might be REAL"
+
     return prediction

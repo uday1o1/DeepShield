@@ -1,37 +1,50 @@
 import os
 from flask import Flask, render_template, request, jsonify
+from flask_cors import CORS
 import requests
 from werkzeug.utils import secure_filename
 
-from utils import model_predict
-
-current_directory = os.path.abspath(os.getcwd())
+from predicter import model_predict
+from utils import clear_downloads
 
 app = Flask(__name__)
+CORS(app)
+
+current_directory = os.path.abspath(os.getcwd())
+uploads_directory = os.path.join(current_directory, 'uploads')
 
 # Set the path for uploaded videos
-UPLOAD_FOLDER = 'uploads'
-UPLOAD_FOLDER = os.path.join(current_directory, 'uploads')
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['UPLOAD_FOLDER'] = uploads_directory
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('popup.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
     if request.method == 'POST':
+        data = request.get_json()
+        
         # Get the video link from the request
-        video_link = request.json['video_link']
-
+        video_link = data.get('video_link', '')
+        print(video_link)
+        
         # Download the video
-        video_filename = download_video(video_link)
+        save_path = download_video(video_link)
+        
+        if save_path == None:
+            return jsonify({'prediction': "video cannot be downloaded"})
+        
+        # Perform deep fake detection
+        prediction = model_predict()
 
-        prediction_result = model_predict()
-
-        return jsonify({'prediction': prediction_result})
+        # Return the prediction as JSON
+        return jsonify({'prediction': prediction})
 
 def download_video(video_link):
+    #clear uploads folder
+    clear_downloads(uploads_directory)
+    
     try:
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
             os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -51,6 +64,6 @@ def download_video(video_link):
     except Exception as e:
         print(f"Error downloading video: {e}")
         return None
-
+    
 if __name__ == '__main__':
     app.run(debug=True)
