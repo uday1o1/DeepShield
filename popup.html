@@ -74,14 +74,13 @@ width:400px;
     <div class="container">
         <h1>Deepshield - Deep Fake Detector</h1>
         <p>Enter the link to a video to check if it's a deep fake:</p>
-        <form id="videoForm">
-            <input type="text" id="videoLink" placeholder="Enter video link" required>
-            <button type="button" onclick="submitVideo()">Check</button>
-        </form>
-        <div id="result">
-        </div>
-    </div>
+       <form id="videoForm">
+    <input type="text" id="videoLink" placeholder="Enter video link" required>
+    <button type="button" id="checkButton">Check</button>
+</form>
 
+<div id="result"></div>
+    </div>
 <script src="popup.js"></script>
 </body>
 </html>
