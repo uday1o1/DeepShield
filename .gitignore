@@ -1,2 +1,3 @@
 .venv
-uploads
+test.py
+uploads/downloaded_video.mp4
