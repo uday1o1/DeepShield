@@ -4,15 +4,17 @@ from flask_cors import CORS
 import requests
 from werkzeug.utils import secure_filename
 
-from utils import model_predict
+from predicter import model_predict
+from utils import clear_downloads
 
 app = Flask(__name__)
 CORS(app)
 
 current_directory = os.path.abspath(os.getcwd())
+uploads_directory = os.path.join(current_directory, 'uploads')
 
 # Set the path for uploaded videos
-app.config['UPLOAD_FOLDER'] = os.path.join(current_directory, 'uploads')
+app.config['UPLOAD_FOLDER'] = uploads_directory
 
 @app.route('/')
 def index():
@@ -28,16 +30,21 @@ def predict():
         print(video_link)
         
         # Download the video
-        download_video(video_link)
-
+        save_path = download_video(video_link)
+        
+        if save_path == None:
+            return jsonify({'prediction': "video cannot be downloaded"})
+        
         # Perform deep fake detection
         prediction = model_predict()
-        # prediction = "test"
 
         # Return the prediction as JSON
         return jsonify({'prediction': prediction})
 
 def download_video(video_link):
+    #clear uploads folder
+    clear_downloads(uploads_directory)
+    
     try:
         if not os.path.exists(app.config['UPLOAD_FOLDER']):
             os.makedirs(app.config['UPLOAD_FOLDER'])

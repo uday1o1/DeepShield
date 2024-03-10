@@ -25,7 +25,7 @@ function submitVideo() {
         .then(response => response.json())
         .then(data => {
             // Update the result div with the prediction result
-            document.getElementById("result").innerText = "Prediction: " + data.prediction;
+            document.getElementById("result").innerText = data.prediction;
         })
         .catch(error => {
             console.error('Error:', error);
