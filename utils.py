@@ -1,19 +1,24 @@
 import numpy as np
 import os
 import cv2
-from tensorflow import keras
 from tensorflow.keras.models import load_model
 
+from load_pretrained import pretrain_feature_extractor
+
+# Instantiate the pre-trained feature extractor model
+feature_extractor = pretrain_feature_extractor()
 
 current_directory = os.path.abspath(os.getcwd())
 video_path = os.path.join(current_directory, 'uploads', 'downloaded_video.mp4')
-model_path = os.path.join(current_directory, 'models', 'recompiled_best_model.h5')
+# model_path = os.path.join(current_directory, 'models', 'recompiled_best_model.h5')
+# model_path = os.path.join(current_directory, 'models', 'best_model_for_2048.weights.h5')
+model_path = os.path.join(current_directory, 'models', 'model_2048.keras')
 
 # Load the model
 model = load_model(model_path)
 
-max_seq_length = 30  # Adjust based on the length of your sequences
-num_features = 1024  # Adjust based on the complexity of your data and model architecture
+max_seq_length = 20  # Adjust based on the length of your sequences
+num_features = 2048  # Adjust based on the complexity of your data and model architecture
 img_size = 224
 
 # Function to crop the center square of a frame
@@ -32,7 +37,10 @@ def crop_center_square(frame):
     return frame[start_y : start_y + min_dim, start_x : start_x + min_dim]
 
 # Function to load and preprocess a video
-def load_video(max_frames=0, resize=(224, 224)):
+def load_video():
+    max_frames = 0
+    resize=(img_size, img_size)
+    
     # Initialize a VideoCapture object to read frames from the video
     cap = cv2.VideoCapture(video_path)
     
@@ -70,33 +78,6 @@ def load_video(max_frames=0, resize=(224, 224)):
     
     # Convert the list of frames to a NumPy array and return it
     return np.array(frames)
-
-def pretrain_feature_extractor():
-    # Load the InceptionV3 model pre-trained on ImageNet
-    feature_extractor = keras.applications.InceptionV3(
-        weights="imagenet",     # Load pre-trained weights
-        include_top=False,      # Exclude the fully connected layers
-        pooling="avg",          # Global average pooling layer as the final layer
-        input_shape=(img_size, img_size, 3)  # Input shape of images (height, width, channels)
-    )
-    
-    # Get the preprocess_input function specific to InceptionV3
-    preprocess_input = keras.applications.inception_v3.preprocess_input
-    
-    # Define the input layer for the model
-    inputs = keras.Input((img_size, img_size, 3))
-    
-    # Apply the pre-processing function to the input
-    preprocessed = preprocess_input(inputs)
-    
-    # Connect the input to the feature extractor
-    outputs = feature_extractor(preprocessed)
-    
-    # Create and return the Keras Model
-    return keras.Model(inputs, outputs, name="feature_extractor")
-
-# Instantiate the pre-trained feature extractor model
-feature_extractor = pretrain_feature_extractor()
 
 # Function to prepare features and masks for a single video
 def prepare_single_video(frames):
@@ -136,7 +117,6 @@ def sequence_prediction():
     return model.predict([frame_features, frame_mask])[0]
 
 def model_predict():
-    
     prediction = "The video might be REAL"
     
     # Perform sequence prediction and print the result
