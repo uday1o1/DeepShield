@@ -1,8 +1,3 @@
-// content.js
-
-// Example content script that interacts with the web page content
-// For illustration purposes only, replace with your actual content script logic
-
 // Example: Listen for page load event
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Page loaded');

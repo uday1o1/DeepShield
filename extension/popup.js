@@ -1,5 +1,3 @@
-// popup.js
-
 document.addEventListener('DOMContentLoaded', function () {
     // Get the button element
     var checkButton = document.getElementById("checkButton");

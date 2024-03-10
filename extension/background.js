@@ -1,8 +1,3 @@
-// background.js
-
-// Example background script that listens for events or performs background tasks
-// For illustration purposes only, replace with your actual background script logic
-
 // Listen for events, such as when the extension is installed, updated, or a message is received
 chrome.runtime.onInstalled.addListener(function() {
     console.log('Extension installed');
