@@ -27,8 +27,6 @@
   background: #ff6b6b;
   transition: width .2s ease;
 }
-
-/* Small control buttons inside panel */
 #deepshield-overlay .controls {
   margin-top: 8px;
   display: flex;

@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "type": "module",
   "private": true,
+  " ": "Chrome MV3 + MediaPipe + onnxruntime-web",
   "scripts": {
     "build": "node esbuild.config.mjs",
     "dev": "node esbuild.config.mjs && chokidar 'src/**' 'public/**' 'models/**' -c 'node esbuild.config.mjs'"
   },
   "devDependencies": {
     "chokidar": "^3.6.0",
-    "esbuild": "^0.23.0"
+    "esbuild": "^0.23.1"
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^0.10.10",

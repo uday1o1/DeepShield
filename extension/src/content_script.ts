@@ -9,7 +9,7 @@ let THR: Thresholds = { t1: 0.4, t2: 0.7, ema_half_life_frames: 12 };
   } catch {}
 })();
 
-// ---------------- Panel with controls ----------------
+// Panel with controls
 const panel = document.createElement("div");
 panel.id = "deepshield-overlay";
 panel.innerHTML = `
@@ -21,27 +21,21 @@ panel.innerHTML = `
   </div>
 `;
 document.documentElement.appendChild(panel);
-
 const scoreEl = panel.querySelector("#ds-score") as HTMLElement;
 const fillEl  = panel.querySelector("#ds-fill") as HTMLElement;
 const pauseBtn = panel.querySelector("#ds-pause") as HTMLButtonElement;
 const stopBtn  = panel.querySelector("#ds-stop") as HTMLButtonElement;
 
-// ---------------- Fullscreen canvas ----------------
+// Fullscreen canvas
 const canvas = document.createElement("canvas");
 canvas.id = "deepshield-canvas";
 document.documentElement.appendChild(canvas);
 const ctx = canvas.getContext("2d")!;
+function resizeCanvas() { canvas.width = innerWidth; canvas.height = innerHeight; }
+resizeCanvas(); addEventListener("resize", resizeCanvas);
 
-function resizeCanvas() {
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-resizeCanvas();
-addEventListener("resize", resizeCanvas);
-
-// ---------------- Helpers ----------------
-function toPx(b: {x:number;y:number;width:number;height:number}) {
+// Helpers
+function toPx(b:{x:number;y:number;width:number;height:number}) {
   return { x: b.x * canvas.width, y: b.y * canvas.height, w: b.width * canvas.width, h: b.height * canvas.height };
 }
 function colorFor(risk:number) {
@@ -55,32 +49,29 @@ function panelBg(risk:number) {
   return "rgba(0,120,60,.75)";
 }
 
-// ---------------- Control buttons ----------------
+// Controls
 let paused = false;
-
 pauseBtn.onclick = () => {
   paused = !paused;
   pauseBtn.textContent = paused ? "Resume" : "Pause";
   chrome.runtime.sendMessage({ type: paused ? "OFFSCREEN_STOP" : "OFFSCREEN_START" });
 };
-
 stopBtn.onclick = () => {
   paused = false;
   pauseBtn.textContent = "Pause";
   chrome.runtime.sendMessage({ type: "STOP_ANALYSIS" });
-  // Clear overlay UI
   scoreEl.textContent = "—";
   fillEl.style.width = "0%";
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 };
 
-// ---------------- Listen for inference results ----------------
+// Receive results
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg.type === "FACES" && !paused) {
     ctx.clearRect(0,0,canvas.width,canvas.height);
     let top = 0;
     for (const f of msg.faces as Array<{id:number;score:number;smooth:number;bbox:any}>) {
-      const risk = Math.max(0, Math.min(1, f.smooth)); // clamp
+      const risk = Math.max(0, Math.min(1, f.smooth));
       const {x,y,w,h} = toPx(f.bbox);
       ctx.lineWidth = 3;
       ctx.strokeStyle = colorFor(risk);

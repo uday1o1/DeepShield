@@ -5,6 +5,7 @@ const SIZE = 224;
 
 export async function analyzeBatch(crops: FaceCrop[]): Promise<{ id:number; score:number }[]> {
   if (!crops.length) return [];
+
   const session = await initSession();
   // @ts-ignore
   const ort = (await import("onnxruntime-web"));
