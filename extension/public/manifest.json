@@ -19,12 +19,11 @@
     {
       "resources": [
         "models/deepshield.onnx",
-        "vendor/mediapipe/wasm/*"
+        "vendor/mediapipe/wasm/*",
+        "thresholds.json"
       ],
       "matches": ["<all_urls>"]
     }
   ],
-  "icons": {
-    "128": "icons/128.png"
-  }
+  "icons": { "128": "icons/128.png" }
 }
