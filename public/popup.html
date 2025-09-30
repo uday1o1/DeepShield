@@ -1,0 +1,12 @@
+<!doctype html>
+<html>
+  <body style="font-family:system-ui;padding:12px;min-width:200px;">
+    <button id="start">Start Analyzing</button>
+    <button id="stop">Stop</button>
+    <script type="module">
+      const send = (type)=>chrome.runtime.sendMessage({type});
+      start.onclick = ()=>send("START_ANALYSIS");
+      stop.onclick  = ()=>send("STOP_ANALYSIS");
+    </script>
+  </body>
+</html>
