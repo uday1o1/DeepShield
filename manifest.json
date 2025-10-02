@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Deepfake Watch (Prototype)",
-  "version": "0.1.0",
-  "description": "Warns on possible deepfakes via tab capture (user-approved).",
-  "permissions": ["storage", "scripting", "activeTab"],
+  "version": "0.2.1",
+  "description": "Tab-capture deepfake warnings with popup controls (no page overlay).",
+  "permissions": ["storage", "scripting", "activeTab", "notifications"],
   "host_permissions": ["*://*.youtube.com/*"],
   "icons": {
     "16": "assets/icon16.png",
@@ -11,18 +11,18 @@
     "128": "assets/icon128.png"
   },
   "action": {
-    "default_title": "Deepfake Watch"
+    "default_title": "Deepfake Watch",
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "src/background/background.js",
     "type": "module"
   },
   "content_scripts": [
-  {
-    "matches": ["*://*.youtube.com/*"],
-    "js": ["src/content/content.js"],
-    "run_at": "document_idle"
-  }
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["src/content/content.js"],
+      "run_at": "document_idle"
+    }
   ]
-
 }
