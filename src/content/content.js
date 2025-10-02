@@ -1,44 +1,168 @@
-import { startCapture, stopCapture, makeFrameReader } from "../capture/tabCapture.js";
-import { ensurePanel, setDot, toast, bindControls, restoreThreshold, getThreshold } from "../ui/overlay.js";
-import { setupYouTubeNavigationHooks } from "./ytNav.js";
-import { emaUpdate, resetEma, shouldTrigger } from "../scoring/ema.js";
-import { scoreFrameStub } from "../scoring/scorerStub.js";
-
-let reader, running = false;
+let stream, reader, running = false;
 let lastSample = 0;
 
-ensurePanel();
-bindControls(() => running ? stopSession() : startSession());
-restoreThreshold();
-setupYouTubeNavigationHooks(onVideoChange);
+// --- EMA + trigger window ---
+let ema = 0, alpha = 0.3;
+let aboveCount = 0, windowN = 8, windowK = 3;
+function resetEma() { ema = 0; aboveCount = 0; }
+function emaUpdate(raw) {
+  ema = alpha * raw + (1 - alpha) * ema;
+  aboveCount = Math.max(0, Math.min(windowN, (raw >= 0.5 ? aboveCount + 1 : Math.max(0, aboveCount - 1))));
+  return ema;
+}
+function shouldTrigger(smoothed, threshold) {
+  return smoothed >= threshold && aboveCount >= windowK;
+}
 
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg?.type === "DF_START") startSession();
-  if (msg?.type === "DF_STOP") stopSession();
-});
+// --- Threshold store ---
+async function getThreshold() {
+  const st = await chrome.storage.local.get("df_threshold");
+  return Number(st.df_threshold ?? 0.8);
+}
 
+// --- UI panel (inline) ---
+function ensurePanel() {
+  if (document.getElementById("dfw-panel")) return;
+  const css = `
+#dfw-panel{position:fixed;right:16px;bottom:16px;z-index:2147483647;background:rgba(17,17,24,.92);color:#fff;font:12px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:12px;border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.35);width:240px;backdrop-filter:blur(6px)}
+#dfw-hdr{display:flex;align-items:center;justify-content:space-between;gap:8px}
+#dfw-dot{width:10px;height:10px;border-radius:50%;background:#3fb950}
+#dfw-ctl{margin-top:8px;display:grid;gap:8px}
+#dfw-slider{width:100%}
+#dfw-note{font-size:11px;color:#c9c9d3}
+#dfw-btns{display:flex;gap:8px}
+#dfw-btns button{flex:1;padding:6px 8px;border-radius:8px;border:0;background:#2b2b36;color:#fff;cursor:pointer}
+#dfw-btns button:hover{background:#393949}
+#dfw-toast{position:fixed;right:16px;bottom:102px;z-index:2147483647;background:#ff3b30;color:#fff;padding:10px 12px;border-radius:12px;display:none;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+#dfw-toast.safe{background:#f59e0b}
+`;
+  const style = document.createElement("style");
+  style.textContent = css;
+  document.documentElement.appendChild(style);
+
+  const el = document.createElement("div");
+  el.id = "dfw-panel";
+  el.innerHTML = `
+    <div id="dfw-hdr">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="dfw-dot"></span><strong>Deepfake Watch</strong>
+      </div>
+      <button id="dfw-toggle">Start</button>
+    </div>
+    <div id="dfw-ctl">
+      <label>Warn at: <span id="dfw-val">0.80</span></label>
+      <input id="dfw-slider" type="range" min="0.5" max="0.95" step="0.01" value="0.8">
+      <div id="dfw-note">Local analysis via tab capture. Probabilistic, not proof.</div>
+      <div id="dfw-btns"><button id="dfw-pause">Pause</button><button id="dfw-reset">Reset</button></div>
+    </div>
+    <div id="dfw-toast"></div>
+  `;
+  document.body.appendChild(el);
+
+  document.getElementById("dfw-toggle").onclick = () => running ? stopSession() : startSession();
+  document.getElementById("dfw-pause").onclick = () => running && stopSession();
+  document.getElementById("dfw-reset").onclick = () => { resetEma(); setDot("amber"); };
+
+  document.getElementById("dfw-slider").oninput = async (e) => {
+    const t = Number(e.target.value);
+    document.getElementById("dfw-val").textContent = t.toFixed(2);
+    await chrome.storage.local.set({ df_threshold: t });
+  };
+
+  restoreThresholdUI();
+}
+
+async function restoreThresholdUI() {
+  const t = await getThreshold();
+  const s = document.getElementById("dfw-slider");
+  const v = document.getElementById("dfw-val");
+  if (s) s.value = String(t);
+  if (v) v.textContent = t.toFixed(2);
+}
+
+function setDot(state) {
+  const dot = document.getElementById("dfw-dot");
+  const btn = document.getElementById("dfw-toggle");
+  const colors = { green: "#3fb950", amber: "#f59e0b", red: "#ff3b30" };
+  if (dot) dot.style.background = colors[state] || colors.green;
+  if (btn) btn.textContent = state === "green" ? "Start" : "Stop";
+}
+
+function toast(msg, tone="alert") {
+  const t = document.getElementById("dfw-toast");
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.toggle("safe", tone === "info");
+  t.style.display = "block";
+  clearTimeout(t._hide);
+  t._hide = setTimeout(() => t.style.display = "none", 4200);
+}
+
+// --- YouTube SPA navigation hook ---
+function setupYouTubeNavigationHooks(onChange) {
+  document.addEventListener("yt-navigate-finish", onChange, true);
+  const _push = history.pushState, _replace = history.replaceState;
+  history.pushState = function(){ const r = _push.apply(this, arguments); queueMicrotask(onChange); return r; };
+  history.replaceState = function(){ const r = _replace.apply(this, arguments); queueMicrotask(onChange); return r; };
+  const mo = new MutationObserver(() => onChange());
+  mo.observe(document.documentElement, { childList: true, subtree: true });
+}
+
+// --- Tab capture + frame reader ---
+async function startCapture() {
+  const s = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+  const [vTrack] = s.getVideoTracks();
+  vTrack.onended = () => stopSession();
+  return s;
+}
+function makeFrameReader(s) {
+  const [vTrack] = s.getVideoTracks();
+  const msp = new MediaStreamTrackProcessor({ track: vTrack });
+  return msp.readable.getReader();
+}
+
+// --- Stub scorer (replace later with real model) ---
+async function scoreFrameStub(videoFrame) {
+  const off = new OffscreenCanvas(224, 224);
+  const ctx = off.getContext("2d", { willReadFrequently: true });
+  // @ts-ignore
+  ctx.drawImage(videoFrame, 0, 0, 224, 224);
+  const { data } = ctx.getImageData(0, 0, 224, 224);
+  let mean = 0; for (let i = 0; i < data.length; i += 4) mean += data[i];
+  mean /= (data.length / 4);
+  let varAcc = 0; for (let i = 0; i < data.length; i += 4) { const d = data[i] - mean; varAcc += d*d; }
+  const variance = Math.min(1, Math.sqrt(varAcc / (data.length / 4)) / 64);
+  return variance; // 0..1 placeholder
+}
+
+// --- Session control + loop ---
 async function startSession() {
   if (running) return;
   running = true;
   resetEma();
   setDot("amber");
+
   try {
-    const stream = await startCapture();
-    reader = makeFrameReader(stream);
-    loop();
+    stream = await startCapture();
   } catch {
     running = false;
     setDot("red");
-    toast("Permission denied for tab capture.", "warn");
+    toast("Permission denied for tab capture.", "info");
     chrome.runtime.sendMessage({ type: "DF_SESSION_OFF" });
+    return;
   }
+
+  reader = makeFrameReader(stream);
+  lastSample = 0;
+  loop();
 }
 
 async function stopSession() {
   if (!running) return;
   running = false;
-  await stopCapture(reader);
-  reader = null;
+  try { reader?.releaseLock(); } catch {}
+  try { stream?.getTracks().forEach(t => t.stop()); } catch {}
+  stream = null; reader = null;
   setDot("green");
   chrome.runtime.sendMessage({ type: "DF_SESSION_OFF" });
 }
@@ -50,22 +174,26 @@ async function loop() {
     const now = performance.now();
     if (now - lastSample >= 3000) {
       lastSample = now;
-      const score = await scoreFrameStub(frame); // replace later with real model
-      const ema = emaUpdate(score);
+      const raw = await scoreFrameStub(frame);
+      const smoothed = emaUpdate(raw);
       const threshold = await getThreshold();
-      if (shouldTrigger(score, ema, threshold)) {
+      if (shouldTrigger(smoothed, threshold)) {
         setDot("red");
-        toast(`Possible deepfake risk (score ${ema.toFixed(2)})`);
+        toast(`Possible deepfake risk (score ${smoothed.toFixed(2)})`);
         chrome.runtime.sendMessage({ type: "DF_HIT" });
+        // cool-down: reduce aboveCount a bit
+        aboveCount = Math.max(0, aboveCount - 2);
       } else {
-        setDot(ema >= threshold * 0.85 ? "amber" : "green");
+        setDot(smoothed >= threshold * 0.85 ? "amber" : "green");
       }
     }
     frame.close();
   }
 }
 
-function onVideoChange() {
-  resetEma();
-  toast("New video detected — analysis reset.", "info");
-}
+// --- Init on load ---
+ensurePanel();
+setupYouTubeNavigationHooks(() => { resetEma(); toast("New video detected — analysis reset.", "info"); });
+
+// Let background know we're ready (helps avoid "receiving end does not exist")
+chrome.runtime.sendMessage({ type: "DF_READY" });
