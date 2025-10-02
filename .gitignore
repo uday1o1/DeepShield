@@ -4,4 +4,4 @@
 node_modules/
 dist/
 *.zip
-model/*.onnx
+model/
