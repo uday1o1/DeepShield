@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "DeepShield (Prototype)",
+  "version": "0.3.0",
+  "description": "Local deepfake risk detector for any site using tab sharing and on-device inference.",
+  "permissions": ["storage", "scripting", "activeTab", "notifications"],
+  "host_permissions": ["<all_urls>"],
+  "icons": {
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
+  },
+  "action": {
+    "default_title": "DeepShield",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "src/background/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["models/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

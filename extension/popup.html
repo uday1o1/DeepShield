@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DeepShield</title>
+  <style>
+    body { font: 13px system-ui,-apple-system,Segoe UI,Roboto,sans-serif; margin: 12px; width: 260px; }
+    .row { display:flex; align-items:center; justify-content:space-between; margin:8px 0; }
+    #startBtn, #stopBtn { width:100%; padding:8px 10px; border:0; border-radius:8px; cursor:pointer; }
+    #startBtn { background:#1a73e8; color:#fff; }
+    #stopBtn  { background:#d93025; color:#fff; display:none; }
+    #warn { color:#d93025; display:none; margin-top:6px; }
+    #slider { width:100%; }
+    small { color:#666; }
+    #count { font-weight:600; }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <div>Status:</div>
+    <div id="status">OFF</div>
+  </div>
+
+  <button id="startBtn">Start (share this tab)</button>
+  <button id="stopBtn">Stop</button>
+
+  <div class="row" style="margin-top:10px;">
+    <div>Confidence</div>
+    <div><span id="thVal">0.80</span></div>
+  </div>
+  <input id="slider" type="range" min="0.5" max="0.95" step="0.01" value="0.80" />
+
+  <div class="row" style="margin-top:10px;">
+    <div>Detections</div>
+    <div id="count">0</div>
+  </div>
+
+  <div id="warn"></div>
+  <small>
+    Tip: In the share dialog, choose <b>This Tab</b>. If not available, select
+    <b>Window → your browser window</b>.
+  </small>
+
+  <script src="popup.js"></script>
+</body>
+</html>
